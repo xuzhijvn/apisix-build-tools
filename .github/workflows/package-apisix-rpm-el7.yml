@@ -66,6 +66,15 @@ jobs:
           docker exec centos7Instance bash -c "rpm --import https://repos.apiseven.com/KEYS"
           docker exec centos7Instance bash -c "yum -y install https://repos.apiseven.com/packages/centos/apache-apisix-repo-1.0-1.noarch.rpm"
 
+      - name: fix centos7 repo inside test container
+        run: |
+          docker exec centos7Instance bash -c "\
+            sed -re 's/^#?\s*(mirrorlist)/#\1/g' \
+                -e 's|^#?\s*baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
+                -i /etc/yum.repos.d/CentOS-* \
+          "
+          docker exec centos7Instance bash -c 'printf "[sclo-rh]\nname=CentOS-7 - SCLo rh\nbaseurl=http://vault.centos.org/centos/7/sclo/x86_64/rh/\ngpgcheck=0\nenabled=1\n\n[sclo-sclo]\nname=CentOS-7 - SCLo sclo\nbaseurl=http://vault.centos.org/centos/7/sclo/x86_64/sclo/\ngpgcheck=0\nenabled=1\n" > /etc/yum.repos.d/CentOS-SCLo-vault.repo'
+
       - name: install APISIX(-remote) master by rpm in container
         run: |
           docker exec centos7Instance bash -c "yum -y localinstall /output/apisix-remote-master-0.el7.x86_64.rpm"
