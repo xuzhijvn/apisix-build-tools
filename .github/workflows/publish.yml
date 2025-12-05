@@ -58,7 +58,7 @@ jobs:
         env:
           APISIX_TAG_VERSION: ${{ env.TAG_VERSION }}
         run: |
-          wget https://raw.githubusercontent.com/apache/apisix/${APISIX_TAG_VERSION}/.requirements
+          wget https://raw.githubusercontent.com/xuzhijvn/apisix/${APISIX_TAG_VERSION}/.requirements
           source .requirements
 
           # build apisix

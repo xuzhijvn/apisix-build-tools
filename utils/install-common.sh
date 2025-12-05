@@ -52,7 +52,7 @@ install_openresty_rpm() {
 }
 
 install_luarocks() {
-    wget https://raw.githubusercontent.com/apache/apisix/master/utils/linux-install-luarocks.sh
+    wget https://raw.githubusercontent.com/xuzhijvn/apisix/master/utils/linux-install-luarocks.sh
     chmod +x linux-install-luarocks.sh
     ./linux-install-luarocks.sh
 }
