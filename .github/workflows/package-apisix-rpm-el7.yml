@@ -2,13 +2,13 @@ name: package apisix rpm for el7
 
 on:
   push:
-    branches: [ master, v3.8.0 ]
+    branches: [ master, apisix_3.8.1_runtime_1.1.1 ]
     tags:
       - "v*"
     paths-ignore:
       - '*.md'
   pull_request:
-    branches: [ master, v3.8.0 ]
+    branches: [ master, apisix_3.8.1_runtime_1.1.1 ]
     paths-ignore:
       - '*.md'
   schedule:
@@ -18,7 +18,7 @@ on:
       apisix_version:
         description: 'APISIX version to package'
         required: false
-        default: 'master'
+        default: '3.8.1'
         type: string
 
 jobs:
@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      APISIX_VERSION: ${{ github.event.inputs.apisix_version || 'master' }}
+      APISIX_VERSION: ${{ github.event.inputs.apisix_version || '3.8.1' }}
     services:
       etcd:
         image: quay.io/coreos/etcd:v3.5.9-amd64
