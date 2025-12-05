@@ -7,7 +7,7 @@ BUILD_PATH=${BUILD_PATH:-`pwd`}
 
 build_apisix_base_rpm() {
     if [[ $(rpm --eval '%{centos_ver}') == "7" ]]; then
-        yum -y install centos-release-scl
+#        yum -y install centos-release-scl
         yum -y install devtoolset-9 patch wget git make sudo
         set +eu
         source scl_source enable devtoolset-9
@@ -70,7 +70,7 @@ build_apisix_base_apk() {
 
 build_apisix_runtime_rpm() {
     if [[ $(rpm --eval '%{centos_ver}') == "7" ]]; then
-        yum -y install centos-release-scl
+#        yum -y install centos-release-scl
         yum -y install devtoolset-9 patch wget git make sudo cpanminus
         set +eu
         source scl_source enable devtoolset-9
