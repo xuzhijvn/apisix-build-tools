@@ -5,6 +5,25 @@ FROM ${IMAGE_BASE}:${IMAGE_TAG}
 
 # Note: The duplication around the rpm series dockerfile here
 #       is used for reuse the container layer cache
+RUN if [[ $(rpm --eval '%{centos_ver}') == "7" ]]; then \
+        sed -re "s/^#?\s*(mirrorlist)/#\1/g" \
+            -e "s|^#?\s*baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g" \
+            -i /etc/yum.repos.d/CentOS-*; \
+        printf '%s\n' \
+            '[sclo-rh]' \
+            'name=CentOS-7 - SCLo rh' \
+            'baseurl=http://vault.centos.org/7.9.2009/sclo/x86_64/rh/' \
+            'gpgcheck=0' \
+            'enabled=1' \
+            '' \
+            '[sclo-sclo]' \
+            'name=CentOS-7 - SCLo sclo' \
+            'baseurl=http://vault.centos.org/7.9.2009/sclo/x86_64/sclo/' \
+            'gpgcheck=0' \
+            'enabled=1' \
+        > /etc/yum.repos.d/CentOS-SCLo-vault.repo; \
+    fi
+
 RUN if [[ $(rpm --eval '%{centos_ver}') == "8" ]]; then \
         sed -re "s/^#?\s*(mirrorlist)/#\1/g" \
              -e "s|^#?\s*baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g" \
