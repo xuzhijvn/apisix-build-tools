@@ -19,7 +19,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     env:
-      BUILD_APISIX_RUNTIME_VERSION: 1.0.1
+#      BUILD_APISIX_RUNTIME_VERSION: 1.0.1
+      BUILD_APISIX_RUNTIME_VERSION: 1.1.1
     steps:
       - uses: actions/checkout@v2
 
