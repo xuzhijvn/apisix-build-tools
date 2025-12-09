@@ -95,13 +95,13 @@ jobs:
       - name: download offline dependencies
         run: |
           docker exec centos7Instance bash -c "\
-            mkdir -p /output/deps \
-            && yumdownloader --resolve --destdir=/output/deps /output/api6-${APISIX_VERSION}-0.el7.x86_64.rpm || true \
-          "    
+            cd /output && \
+            yumdownloader --resolve --destdir=. api6-${APISIX_VERSION}-0.el7.x86_64.rpm || true \
+          "
 
       - name: archive offline installation package
         run: |
-          TAR_NAME="api6_${APISIX_VERSION}-0_el7.x86_64.tar.gz"
+          TAR_NAME="api6-${APISIX_VERSION}-0_el7.x86_64.tar.gz"
           tar -czvf $TAR_NAME output/
           echo "TAR_NAME=$TAR_NAME" >> $GITHUB_ENV
 
