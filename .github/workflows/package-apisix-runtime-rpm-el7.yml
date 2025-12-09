@@ -2,13 +2,13 @@ name: package apisix-runtime rpm for el7
 
 on:
   push:
-    branches: [ master ]
+    branches: [ htaizq_3.8.1 ]
     tags:
       - "v*"
     paths-ignore:
       - '*.md'
   pull_request:
-    branches: [ master ]
+    branches: [ htaizq_3.8.1 ]
     paths-ignore:
       - '*.md'
   schedule:
@@ -51,7 +51,7 @@ jobs:
           if [ "$APISIX_RUNTIME_VER" != "${BUILD_APISIX_RUNTIME_VERSION}" ]; then exit 1; fi
 
       - name: Publish Artifact
-        uses: actions/upload-artifact@v2.2.4
+        uses: actions/upload-artifact@v4
         with:
           name: apisix-runtime-${{ env.BUILD_APISIX_RUNTIME_VERSION }}-0.el7.x86_64.rpm
           path: output/apisix-runtime-${{ env.BUILD_APISIX_RUNTIME_VERSION }}-0.el7.x86_64.rpm
