@@ -2,34 +2,44 @@ name: package apisix rpm for el7
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, htaizq_* ]
     tags:
       - "v*"
     paths-ignore:
       - '*.md'
   pull_request:
-    branches: [ master ]
+    branches: [ master, htaizq_* ]
     paths-ignore:
       - '*.md'
   schedule:
     - cron: '0 0 * * *'
+  workflow_dispatch:
+    inputs:
+      apisix_version:
+        description: 'APISIX version to package'
+        required: false
+        default: ''
+        type: string
 
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    services:
-      etcd:
-        image: bitnami/etcd:3.4.0
-        ports:
-          - 2379:2379
-          - 2380:2380
-        env:
-          ALLOW_NONE_AUTHENTICATION: yes
-          ETCD_ADVERTISE_CLIENT_URLS: http://0.0.0.0:2379
+    env:
+      APISIX_VERSION: ${{ github.event.inputs.apisix_version || github.ref_name }}
 
     steps:
       - uses: actions/checkout@v2
+
+      - name: start etcd
+        run: |
+          docker run -d \
+            --name etcd \
+            --net host \
+            quay.io/coreos/etcd:v3.5.9 \
+            /usr/local/bin/etcd \
+              --advertise-client-urls http://127.0.0.1:2379 \
+              --listen-client-urls http://0.0.0.0:2379
 
       - name: install dependencies
         run: |
@@ -39,12 +49,7 @@ jobs:
 
       - name: packaging APISIX(-remote) with remote code
         run: |
-          make package type=rpm app=apisix version=master checkout=master image_base=centos image_tag=7 artifact=apisix-remote
-
-      - name: packaging APISIX(-local) with local code
-        run: |
-          git clone https://github.com/apache/apisix.git
-          make package type=rpm app=apisix version=master checkout=master image_base=centos image_tag=7 local_code_path=./apisix artifact=apisix-local
+          make package type=rpm app=apisix version=${APISIX_VERSION} checkout=${APISIX_VERSION} runtime_version=${APISIX_RUNTIME} image_base=centos image_tag=7 artifact=apisix
 
       - name: run centos7 docker and mapping rpm into container
         run: |
@@ -55,9 +60,18 @@ jobs:
           docker exec centos7Instance bash -c "rpm --import https://repos.apiseven.com/KEYS"
           docker exec centos7Instance bash -c "yum -y install https://repos.apiseven.com/packages/centos/apache-apisix-repo-1.0-1.noarch.rpm"
 
+      - name: fix centos7 repo inside test container
+        run: |
+          docker exec centos7Instance bash -c "\
+            sed -re 's/^#?\s*(mirrorlist)/#\1/g' \
+                -e 's|^#?\s*baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
+                -i /etc/yum.repos.d/CentOS-* \
+          "
+          docker exec centos7Instance bash -c 'printf "[sclo-rh]\nname=CentOS-7 - SCLo rh\nbaseurl=http://vault.centos.org/centos/7/sclo/x86_64/rh/\ngpgcheck=0\nenabled=1\n\n[sclo-sclo]\nname=CentOS-7 - SCLo sclo\nbaseurl=http://vault.centos.org/centos/7/sclo/x86_64/sclo/\ngpgcheck=0\nenabled=1\n" > /etc/yum.repos.d/CentOS-SCLo-vault.repo'
+
       - name: install APISIX(-remote) master by rpm in container
         run: |
-          docker exec centos7Instance bash -c "yum -y localinstall /output/apisix-remote-master-0.el7.x86_64.rpm"
+          docker exec centos7Instance bash -c "yum -y localinstall /output/apisix-${APISIX_VERSION}-0.el7.x86_64.rpm"
           docker exec centos7Instance bash -c "apisix start"
 
       - name: check and ensure APISIX(-remote) master is installed
@@ -71,35 +85,27 @@ jobs:
       - name: stop and uninstall APISIX(-remote) master
         run: |
           docker exec centos7Instance bash -c "pkill -f nginx"
-          docker exec centos7Instance bash -c "yum -y erase apisix-remote-master"
+          docker exec centos7Instance bash -c "yum -y erase apisix-${APISIX_VERSION}"
 
-      - name: install APISIX(-remote) master by rpm in container
+      - name: install yumdownloader tools inside centos7 container
         run: |
-          docker exec centos7Instance bash -c "yum -y localinstall /output/apisix-remote-master-0.el7.x86_64.rpm"
-          docker exec centos7Instance bash -c "apisix start"
+          docker exec centos7Instance bash -c "yum install -y yum-utils"
 
-      - name: check and ensure APISIX(-remote) master is installed
+      - name: download offline dependencies
         run: |
-          code=$(curl -k -i -m 20 -o /dev/null -s -w %{http_code} http://127.0.0.1:9180/apisix/admin/routes -H 'X-API-KEY: edd1c9f034335f136f87ad84b625c8f1')
-          if [ ! $code -eq 200 ]; then
-              echo "failed: failed to install Apache APISIX by rpm"
-              exit 1
-          fi
+          docker exec centos7Instance bash -c "\
+            cd /output && \
+            yumdownloader --resolve --destdir=. apisix-${APISIX_VERSION}-0.el7.x86_64.rpm || true \
+          "
 
-      - name: stop and uninstall APISIX(-remote) master
+      - name: archive offline installation package
         run: |
-          docker exec centos7Instance bash -c "pkill -f nginx"
-          docker exec centos7Instance bash -c "yum -y erase apisix-remote-master"
+          TAR_NAME="apisix-${APISIX_VERSION}-0_el7.x86_64.tar.gz"
+          tar -czvf $TAR_NAME output/
+          echo "TAR_NAME=$TAR_NAME" >> $GITHUB_ENV
 
-      - name: install APISIX(-local) by rpm in container
-        run: |
-          docker exec centos7Instance bash -c "yum -y localinstall /output/apisix-local-master-0.el7.x86_64.rpm"
-          docker exec centos7Instance bash -c "apisix start"
-
-      - name: check and ensure APISIX(-local) is installed
-        run: |
-          code=$(curl -k -i -m 20 -o /dev/null -s -w %{http_code} http://127.0.0.1:9180/apisix/admin/routes -H 'X-API-KEY: edd1c9f034335f136f87ad84b625c8f1')
-          if [ ! $code -eq 200 ]; then
-              echo "failed: failed to install Apache APISIX by rpm"
-              exit 1
-          fi
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.TAR_NAME }}
+          path: ${{ env.TAR_NAME }}
